@@ -165,6 +165,9 @@ mali_paths = (
 if any((exists(path) for path in mali_paths)):
     platform = 'mali'
 
+if sysconfig.get_platform().startswith('emscripten'):
+    platform = 'emscripten'
+
 # Needed when cross-compiling
 if environ.get('KIVY_CROSS_PLATFORM'):
     platform = environ.get('KIVY_CROSS_PLATFORM')
@@ -172,6 +175,7 @@ if environ.get('KIVY_CROSS_PLATFORM'):
 # If the user has specified a KIVY_DEPS_ROOT, use that as the root for
 # (ATM only SDL) dependencies. Otherwise, use the default locations.
 KIVY_DEPS_ROOT = os.environ.get('KIVY_DEPS_ROOT', None)
+wasm_dist = join(os.path.abspath(KIVY_DEPS_ROOT or 'kivy-dependencies'), 'dist')
 
 # if KIVY_DEPS_ROOT is None and platform is linux or darwin show a warning
 # message, because using a system provided SDL3 is not recommended.
@@ -491,7 +495,7 @@ except ImportError:
     print('User distribution detected, avoid portable command.')
 
 # Detect which opengl version headers to use
-if platform in ('android', 'darwin', 'ios', 'rpi', 'mali', 'vc'):
+if platform in ('android', 'darwin', 'ios', 'rpi', 'mali', 'vc', 'emscripten'):
     c_options['use_opengl_es2'] = True
 elif c_options['use_opengl_es2'] is None:
     c_options['use_opengl_es2'] = \
@@ -510,6 +514,12 @@ elif platform == 'android':
     print('Android environment detect, use it.')
     c_options['use_android'] = True
     c_options['use_sdl3'] = True
+
+elif platform == 'emscripten':
+    print('Emscripten environment detect, use it.')
+    c_options['use_sdl3'] = True
+    c_options['use_gstreamer'] = False
+    c_options['use_pangoft2'] = False
 
 # If KIVY_SDL3_PATH is explicitly provided by the caller (e.g. a kivy-ios
 # cross-build running on a macOS host), treat it as an unconditional request
@@ -633,7 +643,7 @@ if c_options['use_sdl3'] or can_autodetect_sdl3:
             sdl3_source = 'macos-frameworks'
             print('Activate SDL3 compilation')
 
-    if not sdl3_valid and platform not in {"android", "ios"}:
+    if not sdl3_valid and platform not in {"android", "ios", "emscripten"}:
         # use pkg-config approach instead
         sdl3_flags = pkgconfig('sdl3', 'sdl3-ttf', 'sdl3-image', 'sdl3-mixer')
         if 'libraries' in sdl3_flags:
@@ -711,6 +721,19 @@ if c_options['use_sdl3'] or can_autodetect_sdl3:
             print('Found SDL3 libraries for {}: {}'.format(current_abi, lib_dir))
 
         sdl3_source = 'android-prebuilt'
+
+    if platform == 'emscripten':
+        wasm_include = join(wasm_dist, 'include')
+        sdl3_flags = {
+            'include_dirs': [wasm_include] + [
+                join(wasm_include, name) for name in
+                ('SDL3', 'SDL3_image', 'SDL3_mixer', 'SDL3_ttf')],
+            'library_dirs': [join(wasm_dist, 'wasm')],
+            'libraries': ['kivy_sdl3'],
+            'extra_compile_args': [
+                '-include', join(wasm_include, 'kivy_sdl_rename.h')],
+        }
+        sdl3_source = 'emscripten'
 
 
 can_autodetect_wayland = (
@@ -991,6 +1014,16 @@ def determine_thorvg_flags():
                 'define_macros': [],
             }
 
+    if platform == 'emscripten':
+        return {
+            'include_dirs': [join(wasm_dist, 'include', 'thorvg-1')],
+            'library_dirs': [join(wasm_dist, 'lib')],
+            'libraries': ['thorvg'],
+            'extra_compile_args': [],
+            'extra_link_args': [],
+            'define_macros': [('TVG_STATIC', '1')],
+        }
+
     if platform == 'android':
         # Built by tools/build_thorvg.sh (THORVG_ANDROID=<abi>) into
         # dist/libs/<abi>/libthorvg.a - a static archive, not a
@@ -1151,6 +1184,9 @@ def determine_gl_flags():
         # are provided by the NDK toolchain automatically
         flags['libraries'] = ['GLESv2', 'EGL']
         # NDK headers are automatically included by the toolchain
+    elif platform == 'emscripten':
+        # WebGL comes from the Pyodide main module
+        pass
     elif platform == 'rpi':
 
         if not cross_sysroot:
@@ -1206,7 +1242,7 @@ def determine_sdl3():
     if sdl3_source == "macos-frameworks":
         return sdl3_flags
 
-    if platform == "ios":
+    if platform in ("ios", "emscripten"):
         return sdl3_flags
 
     default_sdl3_path = None

@@ -551,13 +551,16 @@ def _get_platform():
         return 'linux'
     elif _sys_platform.startswith('freebsd'):
         return 'linux'
+    elif _sys_platform == 'emscripten':
+        return 'emscripten'
     return 'unknown'
 
 
 platform = _get_platform()
 '''
 A string identifying the current operating system. It is one
-of: `'win'`, `'linux'`, `'android'`, `'macosx'`, `'ios'` or `'unknown'`.
+of: `'win'`, `'linux'`, `'android'`, `'macosx'`, `'ios'`, `'emscripten'`
+or `'unknown'`.
 You can use it as follows::
 
     from kivy.utils import platform

@@ -92,3 +92,8 @@ kivy/core/system_tray/_system_tray_sdl3.c
 kivy/core/image/_img_sdl3.cpp
 wheelhouse/
 /.vscode
+
+# emscripten
+dist-wasm/
+examples/web/wheels/
+kivy/lib/thorvg/_thorvg.cpp

@@ -13,7 +13,8 @@ IF USE_SDL3:
 
 
 cpdef is_backend_supported():
-    return USE_SDL3
+    # emscripten links GL directly, see cgl_gl
+    return USE_SDL3 and PLATFORM != "emscripten"
 
 
 def init_backend():

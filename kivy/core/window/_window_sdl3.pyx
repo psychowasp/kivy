@@ -66,7 +66,9 @@ cdef class _WindowSDL3Storage:
         cdef str name = None
         if not self.event_filter:
             return 1
-        if is_desktop and event.type == SDL_EVENT_WINDOW_RESIZED:
+        # no blocking resize loop in a browser, let poll() handle it
+        if (is_desktop and platform != "emscripten"
+                and event.type == SDL_EVENT_WINDOW_RESIZED):
             action = ('windowresized',
                         event.window.data1, event.window.data2)
             return self.event_filter(*action)
@@ -168,7 +170,9 @@ cdef class _WindowSDL3Storage:
         SDL_GL_SetAttribute(SDL_GL_RETAINED_BACKING, 0)
         SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1)
 
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2)
+        # WebGL2 on emscripten
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,
+                            3 if platform == "emscripten" else 2)
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0)
 
         if self.gl_backend_name == "angle_sdl3":
@@ -197,6 +201,8 @@ cdef class _WindowSDL3Storage:
 
         if resizable:
             self.win_flags |= SDL_WINDOW_RESIZABLE
+            if platform == "emscripten":
+                self.win_flags |= SDL_WINDOW_FILL_DOCUMENT
 
         if not USE_IOS:
             if borderless:

@@ -594,7 +594,7 @@ class LabelBase(object):
             fdirs = ['/System/Library/Fonts']
         elif platform == 'android':
             fdirs = ['/system/fonts']
-        else:
+        elif platform != 'emscripten':
             raise Exception("Unknown platform: {}".format(platform))
 
         fdirs.append(os.path.join(kivy_data_dir, 'fonts'))

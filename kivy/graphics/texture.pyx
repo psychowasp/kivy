@@ -612,7 +612,7 @@ def texture_have_gles_limits():
     '''
     global _have_gles_limits_defaults
     def _get_gles_limits_default():
-        if platform == 'android':
+        if platform in ('android', 'emscripten'):
             return 1
         if platform == 'ios':
             return int(cgl_get_initialized_backend_name() != 'angle')

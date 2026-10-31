@@ -571,6 +571,11 @@ def runTouchApp(widget=None, embedded=False):
             in another toolkit. (like Qt, check kivy-designed)
 
     '''
+    if platform == 'emscripten' and not embedded:
+        # browser can't block, run on the webloop
+        import asyncio
+        return asyncio.ensure_future(async_runTouchApp(widget=widget))
+
     _runTouchApp_prepare(widget=widget)
 
     # we are in embedded mode, don't do dispatching.

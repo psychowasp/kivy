@@ -248,6 +248,7 @@ cdef extern from "SDL.h":
         SDL_WINDOW_UTILITY
         SDL_WINDOW_TRANSPARENT
         SDL_WINDOW_METAL = 0x20000000           #,          /**< window usable for Metal view */
+        SDL_WINDOW_FILL_DOCUMENT
         SDL_WINDOW_MODAL = 0x0000000000001000
 
     ctypedef enum SDL_HitTestResult:

@@ -742,7 +742,7 @@ class App(EventDispatcher):
                 default_kv_directory = dirname(getfile(self.__class__))
                 if default_kv_directory == '':
                     default_kv_directory = '.'
-            except TypeError:
+            except (TypeError, OSError):
                 # if it's a builtin module.. use the current dir.
                 default_kv_directory = '.'
 
@@ -908,7 +908,7 @@ class App(EventDispatcher):
                 self._app_directory = dirname(getfile(self.__class__))
                 if self._app_directory == '':
                     self._app_directory = '.'
-            except TypeError:
+            except (TypeError, OSError):
                 # if it's a builtin module.. use the current dir.
                 self._app_directory = '.'
         return self._app_directory
@@ -1084,6 +1084,10 @@ Context.html#getFilesDir()>`_ is returned.
     def run(self):
         '''Launches the app in standalone mode.
         '''
+        if platform == 'emscripten':
+            # browser can't block, run on the webloop
+            import asyncio
+            return asyncio.ensure_future(self.async_run())
         self._run_prepare()
         runTouchApp()
         self._stop()

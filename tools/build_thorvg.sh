@@ -121,6 +121,7 @@ THORVG_INSTALL_PREFIX="${THORVG_INSTALL_PREFIX:-$(pwd)/kivy-dependencies/dist}"
 THORVG_SHARED="${THORVG_SHARED:-0}"
 THORVG_IOS="${THORVG_IOS:-}"
 THORVG_ANDROID="${THORVG_ANDROID:-}"
+THORVG_EMSCRIPTEN="${THORVG_EMSCRIPTEN:-}"
 
 # Detect Windows (git-bash / msys / cygwin) so we can keep the rest of the
 # script POSIX-style while still emitting .lib / handling link.exe.
@@ -166,7 +167,7 @@ fi
 if [ -n "$THORVG_IOS" ]; then
   THORVG_MACOS_UNIVERSAL=0
   THORVG_SHARED=1
-elif [ -n "$THORVG_ANDROID" ]; then
+elif [ -n "$THORVG_ANDROID" ] || [ -n "$THORVG_EMSCRIPTEN" ]; then
   THORVG_MACOS_UNIVERSAL=0
   THORVG_SHARED=0
 elif [ "$IS_MACOS" = "1" ]; then
@@ -447,6 +448,14 @@ elif [ -n "$THORVG_ANDROID" ]; then
     -Dcpp_args="--target=$_ANDROID_TARGET --sysroot=$_ANDROID_SYSROOT" \
     -Dc_link_args="--target=$_ANDROID_TARGET --sysroot=$_ANDROID_SYSROOT" \
     -Dcpp_link_args="--target=$_ANDROID_TARGET --sysroot=$_ANDROID_SYSROOT"
+
+elif [ -n "$THORVG_EMSCRIPTEN" ]; then
+  _WASM_FLAGS="$(pyodide config get cxxflags | sed -E 's/-sSUPPORT_LONGJMP( |$)/-sSUPPORT_LONGJMP=wasm\1/')"
+  CC=emcc CXX=em++ AR=emar \
+  _thorvg_configure_and_install "build-emscripten" "$THORVG_INSTALL_PREFIX" \
+    --cross-file "$(pyodide config get meson_cross_file)" \
+    -Dc_args="$_WASM_FLAGS" \
+    -Dcpp_args="$_WASM_FLAGS"
 
 elif [ "$THORVG_MACOS_UNIVERSAL" = "1" ]; then
   # Single-invocation universal2 build (matches libpng's CMake

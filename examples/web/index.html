@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kivy</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #ccc; font: 14px sans-serif; }
+  canvas { display: block; outline: none; }
+  #status { position: absolute; left: 12px; top: 12px; white-space: pre; }
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<div id="status">loading pyodide…</div>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.js"></script>
+<script type="module">
+const status = document.getElementById("status");
+const log = (msg) => { status.textContent = msg; console.log(msg); };
+
+try {
+  const pyodide = globalThis.pyodide = await loadPyodide();
+  pyodide.canvas.setCanvas3D(document.getElementById("canvas"));
+
+  log("installing kivy…");
+  const listing = await (await fetch("wheels/")).text();
+  const wheel = listing.match(/href="([^"]*kivy-[^"]*\.whl)"/i);
+  if (!wheel) throw new Error("no kivy wheel in ./wheels/");
+  await pyodide.loadPackage("micropip");
+  await pyodide.pyimport("micropip").install(new URL(`wheels/${wheel[1]}`, location).href);
+
+  log("starting app…");
+  const app = new URLSearchParams(location.search).get("app") ?? "main.py";
+  const src = await (await fetch(app)).text();
+  status.textContent = "";
+  // resolves when the app exits
+  await pyodide.runPythonAsync(src);
+} catch (err) {
+  log(String(err));
+  throw err;
+}
+</script>
+</body>
+</html>

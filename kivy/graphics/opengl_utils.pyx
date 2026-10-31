@@ -123,6 +123,9 @@ cpdef int gl_has_capability(int cap):
                 value = 0
             else:
                 value = 1
+        elif _platform == 'emscripten':
+            # core in WebGL2
+            value = 1
         else:
             value = gl_has_extension('ARB_texture_non_power_of_two')
             if not value:
