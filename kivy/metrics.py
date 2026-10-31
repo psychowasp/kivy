@@ -191,6 +191,9 @@ class MetricsBase(EventDispatcher):
         if platform in {'android', 'ios'}:
             from kivy.mobile import get_dpi as _mobile_get_dpi
             value = _mobile_get_dpi()
+        elif platform == 'emscripten':
+            from kivy.core.window._emscripten import get_dpi as _web_get_dpi
+            value = _web_get_dpi()
         else:
             # for all other platforms..
             from kivy.base import EventLoop
@@ -246,6 +249,10 @@ class MetricsBase(EventDispatcher):
         if platform in {'android', 'ios'}:
             from kivy.mobile import get_density as _mobile_get_density
             value = _mobile_get_density()
+        elif platform == 'emscripten':
+            from kivy.core.window._emscripten import (
+                get_density as _web_get_density)
+            value = _web_get_density()
         elif platform in {'macosx', 'win'}:
             value = self.dpi / 96.
 
@@ -277,6 +284,10 @@ class MetricsBase(EventDispatcher):
         if platform in {'android', 'ios'}:
             from kivy.mobile import get_fontscale as _mobile_get_fontscale
             value = _mobile_get_fontscale()
+        elif platform == 'emscripten':
+            from kivy.core.window._emscripten import (
+                get_fontscale as _web_get_fontscale)
+            value = _web_get_fontscale()
 
         sync_pixel_scale(fontscale=value)
         return value

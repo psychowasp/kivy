@@ -1485,6 +1485,9 @@ if c_options['use_pangoft2'] in (None, True) and platform not in (
             base_flags, pango_flags, pango_depends)
         print(sources['core/text/_text_pango.pyx'])
 
+if platform == 'emscripten':
+    sources['core/window/_emscripten.pyx'] = base_flags
+
 if platform in ('darwin', 'ios'):
     # activate ImageIO provider for our core image
     if platform == 'ios':

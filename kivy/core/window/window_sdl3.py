@@ -319,6 +319,9 @@ class WindowSDL(WindowBase):
             # We don't have a density or dpi yet set, so let's ask for an update
             self._update_density()
             self._update_dpi()
+            if platform == 'emscripten':
+                from kivy.core.window._emscripten import watch_pixel_ratio
+                watch_pixel_ratio()
 
             # never stay with a None pos, application using w.center
             # will be fired.

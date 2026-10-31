@@ -70,6 +70,7 @@ kivy/lib/vidcore_lite/egl.c
 kivy/core/image/_img_sdl3.c
 kivy/core/text/_text_sdl3.c
 kivy/core/window/_window_sdl3.c
+kivy/core/window/_emscripten.c
 
 # PyDev
 .project
