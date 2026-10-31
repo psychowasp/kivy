@@ -599,6 +599,28 @@ else:
                     return
                 self.pool.add_task(self._load, parameters)
 
-    Loader = LoaderThreadPool()
-    Logger.info('Loader: using a thread pool of {} workers'.format(
-        Loader.num_workers))
+    class LoaderMainThread(LoaderBase):
+        '''Loads on the main loop, for platforms without threads.'''
+
+        def start(self):
+            super(LoaderMainThread, self).start()
+            Clock.schedule_interval(self.run, 0)
+
+        def stop(self):
+            super(LoaderMainThread, self).stop()
+            Clock.unschedule(self.run)
+
+        def run(self, *largs):
+            for _ in range(self.max_upload_per_frame):
+                if not self._running or self._paused or not self._q_load \
+                        or len(self._q_done) >= self.max_upload_per_frame:
+                    return
+                self._load(self._q_load.pop())
+
+    if platform == 'emscripten':
+        Loader = LoaderMainThread()
+        Logger.info('Loader: loading on the main thread')
+    else:
+        Loader = LoaderThreadPool()
+        Logger.info('Loader: using a thread pool of {} workers'.format(
+            Loader.num_workers))
