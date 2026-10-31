@@ -36,6 +36,9 @@ from kivy.resources import resource_find
 from kivy.utils import platform
 from collections import deque
 
+if platform == 'emscripten':
+    from kivy.core.window import _emscripten
+
 
 # SDL_keycode.h, https://wiki.libsdl.org/SDL_Keymod
 KMOD_NONE = 0x0000
@@ -320,8 +323,9 @@ class WindowSDL(WindowBase):
             self._update_density()
             self._update_dpi()
             if platform == 'emscripten':
-                from kivy.core.window._emscripten import watch_pixel_ratio
-                watch_pixel_ratio()
+                _emscripten.watch_pixel_ratio()
+                Clock.unschedule(self._poll_web_keyboard)
+                Clock.schedule_interval(self._poll_web_keyboard, 0)
 
             # never stay with a None pos, application using w.center
             # will be fired.
@@ -852,14 +856,34 @@ class WindowSDL(WindowBase):
             input_type,
             keyboard_suggestions,
         )
+        if platform == 'emscripten':
+            _emscripten.show_keyboard(input_type, keyboard_suggestions)
         Clock.schedule_interval(self._check_keyboard_shown, 1 / 5.)
         return self._sdl_keyboard
 
     def release_keyboard(self, *largs):
         super(WindowSDL, self).release_keyboard(*largs)
         self._win.hide_keyboard()
+        if platform == 'emscripten':
+            _emscripten.hide_keyboard()
         self._sdl_keyboard = None
         return True
+
+    def _poll_web_keyboard(self, dt):
+        for kind, value in _emscripten.poll_keyboard():
+            if kind == 'text':
+                self.dispatch('on_textinput', value)
+            elif kind == 'edit':
+                self.dispatch('on_textedit', value)
+            elif kind == 'key':
+                key, scancode = {'backspace': (8, 42), 'enter': (13, 40)}[value]
+                if not self.dispatch('on_key_down', key, scancode, None,
+                                     self.modifiers):
+                    self.dispatch('on_keyboard', key, scancode, None,
+                                  self.modifiers)
+                self.dispatch('on_key_up', key, scancode)
+            elif kind == 'height':
+                self.trigger_keyboard_height()
 
     def _check_keyboard_shown(self, dt):
         if self._sdl_keyboard is None:

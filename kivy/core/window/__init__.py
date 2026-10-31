@@ -715,6 +715,9 @@ class WindowBase(EventDispatcher):
         if platform in {'android', 'ios'}:
             from kivy.mobile import get_keyboard_height
             return get_keyboard_height()
+        if platform == 'emscripten':
+            from kivy.core.window._emscripten import get_keyboard_height
+            return get_keyboard_height()
         return self._get_kivy_vkheight()
 
     keyboard_height = AliasProperty(_get_kheight, bind=('_keyboard_changed',))
