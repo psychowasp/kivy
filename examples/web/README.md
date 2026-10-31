@@ -9,9 +9,11 @@ Build (needs `pyodide-build`, cmake, ninja, meson):
 Run:
 
     mkdir -p examples/web/wheels && cp dist-wasm/kivy-*.whl examples/web/wheels/
-    cd examples/web && python -m http.server
+    cd examples && python -m http.server
 
-Open http://localhost:8000 (`?app=other.py` to run another script).
+Open http://localhost:8000/web/ or any example, e.g.
+http://localhost:8000/web/?app=../shader/shadertree.py (the app's folder is
+copied into the FS, needs a server with directory listings).
 
 `App.run()` doesn't block in the browser, it schedules `async_run()` on
 Pyodide's event loop. A resizable window fills the page; set

@@ -18,6 +18,26 @@
 const status = document.getElementById("status");
 const log = (msg) => { status.textContent = msg; console.log(msg); };
 
+// copy an app folder into the FS, needs a server with dir listings
+async function fetchTree(pyodide, url, dest, depth = 3) {
+  const res = await fetch(url);
+  if (!res.ok || !(res.headers.get("content-type") ?? "").includes("html")) return;
+  pyodide.FS.mkdirTree(dest);
+  const jobs = [];
+  for (const [, href] of (await res.text()).matchAll(/<a href="([^"?#/][^"?#]*)"/g)) {
+    const name = decodeURIComponent(href);
+    if (name.includes(":") || name.startsWith("..") || name.endsWith(".whl")) continue;
+    if (name.endsWith("/")) {
+      if (depth > 0 && name !== "wheels/")
+        jobs.push(fetchTree(pyodide, url + href, dest + "/" + name.slice(0, -1), depth - 1));
+    } else {
+      jobs.push(fetch(url + href).then((r) => r.arrayBuffer()).then((b) =>
+        pyodide.FS.writeFile(dest + "/" + name, new Uint8Array(b))));
+    }
+  }
+  await Promise.all(jobs);
+}
+
 try {
   const pyodide = globalThis.pyodide = await loadPyodide();
   pyodide.canvas.setCanvas3D(document.getElementById("canvas"));
@@ -30,11 +50,21 @@ try {
   await pyodide.pyimport("micropip").install(new URL(`wheels/${wheel[1]}`, location).href);
 
   log("starting app…");
-  const app = new URLSearchParams(location.search).get("app") ?? "main.py";
-  const src = await (await fetch(app)).text();
+  const appUrl = new URL(new URLSearchParams(location.search).get("app") ?? "main.py", location);
+  const script = decodeURIComponent(appUrl.pathname.split("/").pop());
+  const appDir = "/home/pyodide/app";
+  await fetchTree(pyodide, new URL(".", appUrl).href, appDir);
+  pyodide.FS.mkdirTree(appDir);
+  pyodide.FS.writeFile(`${appDir}/${script}`, new Uint8Array(await (await fetch(appUrl)).arrayBuffer()));
   status.textContent = "";
-  // resolves when the app exits
-  await pyodide.runPythonAsync(src);
+  pyodide.globals.set("_app_script", script);
+  await pyodide.runPythonAsync(`
+import os, sys, runpy
+os.chdir("${appDir}")
+sys.path.insert(0, "${appDir}")
+sys.argv = [_app_script]
+runpy.run_path(_app_script, run_name="__main__")
+`);
 } catch (err) {
   log(String(err));
   throw err;

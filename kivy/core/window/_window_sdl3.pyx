@@ -1045,6 +1045,10 @@ cdef class _WindowSDL3Storage:
 
     def get_relative_mouse_pos(self):
         cdef float x, y
+        if platform == "emscripten":
+            # no global mouse state in a browser
+            SDL_GetMouseState(&x, &y)
+            return x, y
         SDL_GetGlobalMouseState(&x, &y)
         wx, wy = self.get_window_pos()
         return x - wx, y - wy
