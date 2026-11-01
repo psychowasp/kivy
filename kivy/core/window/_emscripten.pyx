@@ -41,7 +41,7 @@ cdef extern from *:
     static void kivy_keyboard_setup(void) {
         EM_ASM({(() => {
             const K = globalThis.__kivyKeyboard = globalThis.__kivyKeyboard || {
-                queue: [], wanted: false, requested: 0, down: 0, sdlText: false, composing: false};
+                queue: [], wanted: false, sdlText: false, composing: false};
             if (K.input) return;
             const input = K.input = document.createElement("input");
             input.setAttribute("aria-hidden", "true");
@@ -77,16 +77,17 @@ cdef extern from *:
                 setTimeout(K.reset);
             });
             input.addEventListener("input", K.reset);
-            document.addEventListener("pointerdown", () => { K.down = performance.now(); }, true);
             document.addEventListener("mousedown", (e) => {
                 if (K.wanted && e.target !== input) e.preventDefault();
             }, true);
-            const refocus = () => {
-                if (K.wanted && document.activeElement !== input && K.requested > K.down)
-                    input.focus({preventScroll: true});
-            };
-            document.addEventListener("pointerup", refocus, true);
-            document.addEventListener("touchend", refocus, true);
+            /* iOS shows the keyboard only for a focus inside a touch handler */
+            document.addEventListener("touchend", () => {
+                const vv = globalThis.visualViewport;
+                if (!K.wanted || (document.activeElement === input && vv && vv.height < innerHeight - 1))
+                    return;
+                input.blur();
+                input.focus({preventScroll: true});
+            }, true);
             if (globalThis.visualViewport)
                 visualViewport.addEventListener("resize", () => K.queue.push(["height", ""]));
         })();});
@@ -102,7 +103,6 @@ cdef extern from *:
             input.setAttribute("autocorrect", suggestions ? "on" : "off");
             input.spellcheck = !!suggestions;
             K.wanted = true;
-            K.requested = performance.now();
             K.reset();
             input.focus({preventScroll: true});
         })($0, $1);}, type, suggestions);
