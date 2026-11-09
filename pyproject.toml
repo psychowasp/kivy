@@ -134,6 +134,10 @@ python_versions = "3.11 - 3.14"
 environment = { ANDROID_API_LEVEL = "21" }
 repair-wheel-command = "cp {wheel} {dest_dir}/"
 
+[tool.cibuildwheel.pyodide]
+before-all = "bash tools/build_emscripten_dependencies.sh"
+repair-wheel-command = "python tools/emscripten_repair_wheel.py {wheel} {dest_dir}"
+
 [tool.coverage.run]
 parallel = true
 branch = true
